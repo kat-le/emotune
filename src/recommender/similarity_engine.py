@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
 
 from src.recommender.feature_builder import (
     load_song_data,
@@ -69,25 +69,26 @@ def get_similar_songs(
 
     matrix, scaler = _get_feature_data(preset)
 
-    # Compare the selected song with every song.
-    similarities = cosine_similarity(
+    # Compare the selected song with every song using Euclidean distance.
+    distances = euclidean_distances(
         matrix[song_index].reshape(1, -1),
         matrix,
     )[0]
 
-    # Build a results table.
+    # Build a results table. Keep the existing `similarity` column name for
+    # API compatibility; smaller values mean more similar songs.
     recommendations = songs.copy()
-    recommendations["similarity"] = similarities
+    recommendations["similarity"] = distances
 
     # Exclude the selected song.
     recommendations = recommendations.drop(
         index=song_index
     )
 
-    # Sort from most similar to least similar.
+    # Sort from the smallest (closest) distance to the largest.
     recommendations = recommendations.sort_values(
         by="similarity",
-        ascending=False,
+        ascending=True,
     )
 
     # Limit recommendations from the same artist.
@@ -213,3 +214,25 @@ def explain_similarity(
         feature_names[feature]
         for feature in closest_features
     )
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Find songs similar to a track using Euclidean distance."
+    )
+    parser.add_argument("track_id", nargs="?", default="6Yj8kVuVR3UPxx9r5eFEoV")
+    parser.add_argument("--top-k", type=int, default=10)
+    parser.add_argument("--preset", default="default")
+    parser.add_argument("--no-artist-diversity", action="store_true")
+    args = parser.parse_args()
+
+    results = get_similar_songs(
+        track_id=args.track_id,
+        top_k=args.top_k,
+        preset=args.preset,
+        use_artist_diversity=not args.no_artist_diversity,
+    )
+
+    print(results.to_string(index=False))

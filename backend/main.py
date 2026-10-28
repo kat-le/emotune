@@ -2,6 +2,7 @@ import os
 import tempfile
 from dotenv import load_dotenv
 import requests
+from pydantic import BaseModel, Field, model_validator
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,6 +33,36 @@ app.add_middleware(
 
 # Initialize emotion detection service
 emotion_service = EmotionDetectionService()
+
+
+class TextRecommendationRequest(BaseModel):
+    """
+    Request model for generating song recommendations
+    based on a user's mood or emotional context.
+    """
+
+    text: Optional[str] = None
+    mood: Optional[str] = None
+    current_mood: Optional[str] = None
+    desired_mood: Optional[str] = None
+    intensity: int = Field(default=3, ge=1, le=5)
+    top_n: int = Field(default=5, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def validate_request(self):
+        # Either a direct mood or analyzed text with
+        # a desired mood must be provided.
+
+        if self.mood:
+            return self
+
+        if self.text and self.text.strip() and self.desired_mood:
+            return self
+
+        raise ValueError(
+            "Provide either a mood or text with a desired mood."
+        )
+
 
 class TextRequest(BaseModel):
     text: Optional[str] = None
@@ -146,151 +177,46 @@ async def recommend_from_audio(file: UploadFile = File(...)):
 
 
 @app.post("/api/recommend/text", response_model=RecommendationResponse)
-async def recommend_from_text(request: TextRequest):
-    # If the user explicitly selects a mood, use it directly.
+async def recommend_from_text(request: TextRecommendationRequest):
     if request.mood:
-        top_emotion = request.mood
-        emotions = [{"name": top_emotion, "score": 1.0}]
-
+        target_mood = request.mood
     else:
-        # Validate text input.
-        if not request.text or not request.text.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="Either 'text' or 'mood' must be provided"
-            )
+        target_mood = request.desired_mood
 
-        try:
-            # Step 1: Analyze text using Hume AI.
-            emotions = await emotion_service.analyze_text(request.text)
+    # Validate that the mood is supported
+    supported_moods = [
+        "happy",
+        "sad",
+        "energetic",
+        "calm",
+        "romantic",
+        "focus",
+        "nostalgic"
+    ]
 
-        except RuntimeError as e:
-            raise HTTPException(
-                status_code=503,
-                detail=str(e)
-            )
 
-        except requests.RequestException as e:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Hume API request failed: {str(e)}"
-            )
-
-        if not emotions:
-            emotions = [{"name": "Unknown", "score": 0.0}]
-
-        # Step 2: Identify the strongest emotion.
-        top_emotion = emotions[0]["name"]
-
-    top_score = emotions[0]["score"]
-
-    # Step 3: Generate song recommendations.
-    if top_emotion == "Unknown":
-        recommendations = []
-    else:
-        recommendations = get_recommendations(
-            top_emotion,
-            emotions,
-            top_k=request.top_n
+    if target_mood not in supported_moods:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported mood: {target_mood}"
         )
 
-    # Step 4: Return results.
-    return RecommendationResponse(
-        emotions=emotions,
-        top_emotion=top_emotion,
-        top_score=top_score,
-        recommendations=recommendations
+    emotions = [
+        {"name": target_mood, "score": 1.0}
+    ]
+
+    recommendations = get_recommendations(
+        top_emotion=target_mood,
+        all_emotions=emotions,
+        top_k=request.top_n
     )
 
-    # """
-    # Analyze text to detect emotions, then get personalized song recommendations.
-
-    # Flow:
-    # 1. User submits text
-    # 2. Text is analyzed for emotions (heuristic for now)
-    # 3. Emotions are passed to the recommender system
-    # 4. Returns detected emotions and recommended songs
-    # """
-    # # If user provided a mood, use it directly for recommendations
-    # if request.mood:
-    #     top_emotion = request.mood
-    #     emotions = [{"name": top_emotion, "score": 1.0}]
-    #     recommendations = get_recommendations(
-    #                         top_emotion,
-    #                         emotions,
-    #                         top_k=10,
-    #                     )
-
-    #     return RecommendationResponse(
-    #         emotions=emotions,
-    #         top_emotion=top_emotion,
-    #         top_score=1.0,
-    #         recommendations=recommendations
-    #     )
-
-    # if not request.text:
-    #     raise HTTPException(status_code=400, detail="Either 'text' or 'mood' must be provided")
-
-    # txt = request.text.lower().strip()
-
-    # # ✅ Guard: small-talk / unclear input
-    # smalltalk = {"hi", "hey", "hello", "yo", "sup", "ok", "okay", "k", "kk", "test"}
-    # if txt in smalltalk or len(txt.split()) <= 1:
-    #     emotions = [{"name": "Unknown", "score": 0.0}]
-    #     return RecommendationResponse(
-    #         emotions=emotions,
-    #         top_emotion="Unknown",
-    #         top_score=0.0,
-    #         recommendations=[]
-    #     )
-
-    # # Heuristic: look for common mood words in text
-    # if any(word in txt for word in ["happy", "joy", "glad", "excited", "elated", "great", "amazing", "awesome"]):
-    #     emotions = [{"name": "Joy", "score": 0.9}]
-    # elif any(word in txt for word in ["sad", "depressed", "unhappy", "down", "lonely", "heartbroken", "crying"]):
-    #     emotions = [{"name": "Sadness", "score": 0.9}]
-    # elif any(word in txt for word in ["angry", "mad", "furious", "annoyed", "frustrated", "pissed"]):
-    #     emotions = [{"name": "Anger", "score": 0.9}]
-    # elif any(word in txt for word in ["scared", "afraid", "fear", "terrified", "anxious", "anxiety", "nervous", "panic", "panicking"]):
-    #     emotions = [{"name": "Fear", "score": 0.9}]
-    # elif any(word in txt for word in ["study", "studying", "focus", "concentrate", "work", "working", "productive", "homework", "reading"]):
-    #     emotions = [{"name": "Concentration", "score": 0.9}]
-    # elif any(word in txt for word in ["chill", "relax", "relaxing", "calm", "peaceful", "sleepy", "tired", "rest", "sleep", "wind down"]):
-    #     emotions = [{"name": "Calmness", "score": 0.9}]
-    # elif any(word in txt for word in ["energetic", "pump", "pumped", "workout", "exercise", "gym", "run", "running", "hype", "party"]):
-    #     emotions = [{"name": "Excitement", "score": 0.9}]
-    # elif any(word in txt for word in ["love", "romantic", "romance", "date", "crush", "heart"]):
-    #     emotions = [{"name": "Love", "score": 0.9}]
-    # elif any(word in txt for word in ["nostalgic", "nostalgia", "memories", "remember", "miss", "missing"]):
-    #     emotions = [{"name": "Nostalgia", "score": 0.9}]
-    # else:
-    #     # ✅ Professional behavior: don't guess a mood when unclear
-    #     emotions = [{"name": "Unknown", "score": 0.0}]
-
-    # top_emotion = emotions[0]["name"]
-    # top_score = emotions[0]["score"]
-
-    # # If unknown, return empty recs (avoid accidental calm defaults)
-    # if top_emotion == "Unknown":
-    #     return RecommendationResponse(
-    #         emotions=emotions,
-    #         top_emotion=top_emotion,
-    #         top_score=top_score,
-    #         recommendations=[]
-    #     )
-
-    # recommendations = get_recommendations(
-    #                     top_emotion,
-    #                     emotions,
-    #                     top_k=request.top_n,
-    #                 )
-
-    # return RecommendationResponse(
-    #     emotions=emotions,
-    #     top_emotion=top_emotion,
-    #     top_score=top_score,
-    #     recommendations=recommendations
-    # )
+    return RecommendationResponse(
+        emotions=emotions,
+        top_emotion=target_mood,
+        top_score=1.0,
+        recommendations=recommendations
+    )
     
 @app.post("/api/recommend/similar", response_model=SimilarSongsResponse)
 async def recommend_similar_songs(request: SimilarSongsRequest):

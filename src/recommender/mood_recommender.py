@@ -20,15 +20,15 @@ from src.recommender.similarity_engine import (
 
 MOOD_PROTOTYPES = {
     "happy": {
-        "danceability": 0.75,
-        "energy": 0.75,
-        "loudness": -5,
+        "danceability": 0.85,
+        "energy": 0.85,
+        "loudness": -4,
         "speechiness": 0.05,
-        "acousticness": 0.15,
+        "acousticness": 0.05,
         "instrumentalness": 0.0,
-        "liveness": 0.15,
-        "valence": 0.90,
-        "tempo": 125,
+        "liveness": 0.2,
+        "valence": 0.98,
+        "tempo": 140,
     },
 
     "sad": {
@@ -80,8 +80,8 @@ MOOD_PROTOTYPES = {
     },
 
     "focus": {
-         "danceability": 0.5,
-        "energy": 2.0,
+        "danceability": 0.5,
+        "energy": 0.2,
         "loudness": 0.5,
         "speechiness": 0.5,
         "acousticness": 2.0,

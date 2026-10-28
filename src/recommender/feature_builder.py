@@ -105,7 +105,7 @@ FEATURE_WEIGHT_PRESETS = {
     },
     "focus": {
         "danceability": 0.8,
-        "energy": 2.0,
+        "energy": 0.2,
         "loudness": 0.5,
         "speechiness": 0.5,
         "acousticness": 2.0,
@@ -171,7 +171,7 @@ def load_song_data(path: Path = DATA_PATH) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
-    return df
+    return df.reset_index(drop=True)
 
 
 # Build feature matrix
