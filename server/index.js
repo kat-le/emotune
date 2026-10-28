@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -21,14 +20,148 @@ const ai = new GoogleGenAI({
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
 
+
+let spotifyAccessToken = null;
+let spotifyTokenExpiresAt = 0;
+
+async function getSpotifyAccessToken() {
+  // Reuse the token until it is close to expiring.
+  if (
+    spotifyAccessToken &&
+    Date.now() < spotifyTokenExpiresAt
+  ) {
+    return spotifyAccessToken;
+  }
+
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Spotify credentials are missing from server/.env");
+  }
+
+  const credentials = Buffer.from(
+    `${clientId}:${clientSecret}`
+  ).toString("base64");
+
+  const response = await fetch(
+    "https://accounts.spotify.com/api/token",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to authenticate with Spotify.");
+  }
+
+  const data = await response.json();
+
+  spotifyAccessToken = data.access_token;
+
+  // Refresh one minute before the token expires.
+  spotifyTokenExpiresAt =
+    Date.now() + (data.expires_in - 60) * 1000;
+
+  return spotifyAccessToken;
+}
+
+
+async function getSpotifyTrackDetails(trackId, accessToken) {
+  if (!trackId) return {};
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/tracks/${encodeURIComponent(trackId)}?market=US`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        `Spotify track lookup failed for ${trackId}:`,
+        response.status
+      );
+      return {};
+    }
+
+    const track = await response.json();
+
+    return {
+      album_image: track.album?.images?.[0]?.url || null,
+      spotify_url: track.external_urls?.spotify || null,
+    };
+
+  } catch (error) {
+    console.error("Spotify artwork lookup error:", error);
+    return {};
+  }
+}
+
+async function addAlbumArtwork(recommendations) {
+  if (!recommendations?.length) return [];
+
+  try {
+    const accessToken = await getSpotifyAccessToken();
+
+    return await Promise.all(
+      recommendations.map(async (song) => {
+        const spotifyDetails = await getSpotifyTrackDetails(
+          song.track_id,
+          accessToken
+        );
+
+        return {
+          ...song,
+          ...spotifyDetails,
+        };
+      })
+    );
+
+  } catch (error) {
+    console.error("Unable to retrieve Spotify artwork:", error);
+
+    // Keep recommendations working even if Spotify is unavailable.
+    return recommendations;
+  }
+}
+
+
+
 const systemInstruction = `
 You are Emotune, a friendly K-pop music recommendation assistant.
-
 Help users discover songs based on their emotions, moods, and music preferences.
-
 You have access to real song recommendations from the Emotune database.
 When a user asks for recommendations, use the appropriate function.
 Never invent song titles or artists.
+SUPPORTED REQUESTS:
+You may ONLY recommend songs using:
+1. Mood-based recommendations.
+2. Similar-song recommendations.
+
+Do NOT recommend songs based on:
+- A specific artist or group.
+- A specific album.
+- A genre or category alone.
+- Release date, popularity, or chart rankings.
+- Requests to list songs by an artist.
+
+If a request does not fit one of the two supported types:
+- Do not call any function.
+- Do not invent or generate song recommendations.
+- Politely explain that Emotune currently supports mood-based
+  and similar-song recommendations only.
+- Suggest an example of a supported request.
 
 Supported moods are:
 happy, sad, energetic, calm, romantic, focus, nostalgic.
@@ -38,7 +171,17 @@ a suitable supported desired mood. If their desired mood is unclear,
 ask a follow-up question.
 
 After receiving recommendations, explain the results in a friendly,
-conversational way. Only recommend songs returned by the functions. 
+conversational way. 
+When recommending songs, do not list song titles or artist names in your text response.
+
+The application displays recommendations separately as song cards.
+Instead, provide a short, friendly introduction to the recommendations.
+
+For example:
+"Here are 10 songs that match your mood! 🎵"
+
+Never repeat the song recommendations in a numbered list or bullet list.
+Only recommend songs returned by the functions. 
 Unless the user requests a different number, always recommend 10 songs.
 `;
 
@@ -282,12 +425,15 @@ app.post("/api/chat", async (req, res) => {
       }
     });
 
-    res.json({
-      success: true,
-      reply: finalResponse.text,
-      recommendations: functionResult.recommendations || []
-    });
+    const recommendationsWithArtwork = await addAlbumArtwork(
+        functionResult.recommendations || []
+    );
 
+    res.json({
+        success: true,
+        reply: finalResponse.text,
+        recommendations: recommendationsWithArtwork
+    });
   } catch (error) {
     console.error("Chat error:", error);
 

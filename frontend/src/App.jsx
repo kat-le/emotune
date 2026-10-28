@@ -87,9 +87,8 @@ function App() {
       song.image_url ||
       song.image;
 
-    const spotifyUrl = trackId
-      ? `https://open.spotify.com/track/${trackId}`
-      : null;
+    const spotifyUrl = song.spotify_url ||
+        (trackId ? `https://open.spotify.com/track/${trackId}` : null);
 
     return (
       <div className="song-card">
