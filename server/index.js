@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "http://127.0.0.1:5173",
 }));
 
 app.use(express.json());
@@ -135,8 +135,6 @@ async function addAlbumArtwork(recommendations) {
     return recommendations;
   }
 }
-
-
 
 const systemInstruction = `
 You are Emotune, a friendly K-pop music recommendation assistant.
@@ -425,14 +423,20 @@ app.post("/api/chat", async (req, res) => {
       }
     });
 
-    const recommendationsWithArtwork = await addAlbumArtwork(
-        functionResult.recommendations || []
-    );
+    // const recommendationsWithArtwork = await addAlbumArtwork(
+    //     functionResult.recommendations || []
+    // );
+
+    // res.json({
+    //     success: true,
+    //     reply: finalResponse.text,
+    //     recommendations: recommendationsWithArtwork
+    // });
 
     res.json({
-        success: true,
-        reply: finalResponse.text,
-        recommendations: recommendationsWithArtwork
+      success: true,
+      reply: finalResponse.text,
+      recommendations: functionResult.recommendations || []
     });
   } catch (error) {
     console.error("Chat error:", error);

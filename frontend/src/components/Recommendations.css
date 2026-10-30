@@ -1,0 +1,18 @@
+.recommendations-panel { height:100%; min-height:0; min-width:0; display:flex;flex-direction:column; overflow:hidden; }
+.recommendations-heading { height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 6px 14px 8px; }
+.recommendations-heading span { font-size:10px;letter-spacing:.18em;color:#8394a5; }
+.recommendations-heading h2 { margin:4px 0 0;font-family:"Momo Trust Display",sans-serif;font-size:22px;color:#3e556b; }
+.recommendation-count { width:32px;height:32px;border-radius:50%;display:grid!important;place-items:center;background:#e7eef4;color:#607c9e!important;font-size:12px!important;letter-spacing:0!important; }
+.recommendations-list {
+    flex:1 1 0;
+    height:0;
+    min-height:0;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding-right:4px; 
+}
+.recommendations-list::-webkit-scrollbar,.chat-messages::-webkit-scrollbar { width:5px; }
+.recommendations-list::-webkit-scrollbar-thumb,.chat-messages::-webkit-scrollbar-thumb { background:#cbd8e3;border-radius:10px; }
+@media (max-width:1100px) { .recommendations-panel { height:auto;min-height:0; } .recommendations-list { max-height:520px; } }

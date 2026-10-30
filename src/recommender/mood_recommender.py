@@ -1,7 +1,7 @@
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import euclidean_distances, cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
 
 from src.recommender.feature_builder import (
     AUDIO_FEATURES,
