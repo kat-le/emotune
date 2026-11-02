@@ -261,7 +261,11 @@ const tools = [
           properties: {
             song_name: {
               type: "STRING",
-              description: "The name of the song to find similar songs for."
+              description: "The exact or partial title of the source song."
+            },
+            artist_name: {
+              type: "STRING",
+              description: "The artist of the source song when the user specifies one. Use this to select the correct song if titles are duplicated."
             },
             top_n: {
               type: "INTEGER",
@@ -305,6 +309,7 @@ async function callEmotuneFunction(name, args) {
     endpoint = "/api/recommend/similar";
     body = {
       song_name: args.song_name,
+      artist_name: args.artist_name || null,
       top_n: topN,
       preset: args.preset || null
     };
@@ -433,10 +438,29 @@ app.post("/api/chat", async (req, res) => {
     //     recommendations: recommendationsWithArtwork
     // });
 
+    let recommendationMeta;
+
+    if (functionCall.name === "get_similar_songs") {
+      recommendationMeta = {
+        type: "similar",
+        sourceSong: {
+          title: functionResult.track_name || functionCall.args?.song_name || "Requested song",
+          artist: functionResult.track_artist || null
+        }
+      };
+    } else {
+      const mood = functionResult.top_emotion || functionCall.args?.mood || functionCall.args?.desired_mood;
+      recommendationMeta = {
+        type: "mood",
+        mood: mood ? mood.charAt(0).toUpperCase() + mood.slice(1) : null
+      };
+    }
+
     res.json({
       success: true,
       reply: finalResponse.text,
-      recommendations: functionResult.recommendations || []
+      recommendations: functionResult.recommendations || [],
+      recommendationMeta
     });
   } catch (error) {
     console.error("Chat error:", error);
