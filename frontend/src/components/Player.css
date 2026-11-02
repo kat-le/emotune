@@ -76,7 +76,14 @@
 .now-playing-label { font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#8394a5; }
 .now-playing-details h2 { margin:12px 0 7px;font-family:"Momo Trust Display",sans-serif;font-size:28px;line-height:1.08;color:#3e556b; }
 .now-playing-details p { margin:0;color:#8394a5;font-size:14px;line-height:1.45; }
-.main-play-button { width:58px;height:58px;margin-top:22px;border:none;border-radius:50%;background:#607c9e;color:white;font-size:19px;cursor:pointer;box-shadow:0 12px 26px rgba(96,124,158,.28); }
+.now-playing-details .now-playing-explanation { margin:6px 0 8px;color:#607c9e;font-size:12px;line-height:1.4; }
+.player-controls { margin-top:22px;display:flex;align-items:center;justify-content:flex-start;gap:10px; }
+.main-play-button,.skip-button { border:none;padding:0;background:none;cursor:pointer;display:grid;place-items:center; }
+.main-play-button { width:58px;height:58px; }
+.skip-button { width:44px;height:44px; }
+.main-play-button img { width:58px;height:58px;object-fit:contain; }
+.skip-button img { width:44px;height:44px;object-fit:contain; }
+.skip-button-left img { transform:scaleX(-1); }
 .main-play-button:disabled { opacity:.35;cursor:not-allowed; }
 .progress-copy { margin-top:12px;width:150px;display:flex;justify-content:space-between;color:#8394a5;font-size:10px; }
 @keyframes vinyl-spin { to { transform:rotate(360deg); } }
@@ -86,4 +93,4 @@
   .vinyl-album-art { width:155px;height:155px; }
 }
 @media (max-width:1100px) { .player-area { min-height:560px; } .now-playing { gap:28px; } }
-@media (max-width:760px) { .now-playing { flex-direction:column;gap:12px; } .now-playing-details { text-align:center;width:240px; } .progress-copy { margin-inline:auto; } .vinyl-progress-wrap,.vinyl-semi-progress { width:320px;height:320px; } .vinyl-wrap,.vinyl-disc { width:320px;height:320px;min-width:320px; } .vinyl-album-art { width:115px;height:115px; } }
+@media (max-width:760px) { .now-playing { flex-direction:column;gap:12px; } .now-playing-details { text-align:center;width:240px; } .player-controls { justify-content:center; } .progress-copy { margin-inline:auto; } .vinyl-progress-wrap,.vinyl-semi-progress { width:320px;height:320px; } .vinyl-wrap,.vinyl-disc { width:320px;height:320px;min-width:320px; } .vinyl-album-art { width:115px;height:115px; } }

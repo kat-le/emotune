@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_PATH = PROJECT_ROOT / "data" / "kpop_songs.csv"
+DATA_PATH = PROJECT_ROOT / "data" / "kpop_songs_labeled.csv"
 
 def load_songs():
     if not DATA_PATH.exists():

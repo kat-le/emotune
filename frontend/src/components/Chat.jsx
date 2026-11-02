@@ -45,7 +45,7 @@ export default function Chat({ onRecommendations }) {
         ...previous,
         { role: "assistant", content: data.reply },
       ]);
-      onRecommendations(recommendations);
+      onRecommendations(recommendations, data.recommendationMeta || null);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((previous) => [
@@ -55,7 +55,7 @@ export default function Chat({ onRecommendations }) {
           content: "Sorry! I'm having trouble responding right now. Please try again.",
         },
       ]);
-      onRecommendations([]);
+      onRecommendations([], null);
     } finally {
       setLoading(false);
     }

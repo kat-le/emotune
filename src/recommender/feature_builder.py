@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 # Dataset configuration
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_PATH = PROJECT_ROOT / "data" / "kpop_songs.csv"
+DATA_PATH = PROJECT_ROOT / "data" / "kpop_songs_labeled.csv"
 
 
 # Audio features

@@ -194,6 +194,9 @@ def get_mood_recommendations(
 
     recommendations = songs.copy()
     recommendations["similarity"] = similarities
+    recommendations["explanation"] = (
+        f"Recommended for the {mood.capitalize()} mood based on similar audio features"
+    )
 
     recommendations = recommendations.sort_values(
         by="similarity",
@@ -212,6 +215,7 @@ def get_mood_recommendations(
             "track_name",
             "track_artist",
             "similarity",
+            "explanation",
         ] + AUDIO_FEATURES
     ].reset_index(drop=True)
 

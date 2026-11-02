@@ -84,6 +84,7 @@ def get_similar_songs_by_name(
     preset: Optional[str] = None,
     use_genre_boost: bool = True,
     use_artist_diversity: bool = True,
+    artist_name: Optional[str] = None,
 ) -> List[Dict]:
 
     try:
@@ -91,6 +92,7 @@ def get_similar_songs_by_name(
             song_name,
             top_k=limit,
             preset=preset or "default",
+            artist_name=artist_name,
         )
 
         records = df.to_dict(orient="records")
@@ -99,6 +101,56 @@ def get_similar_songs_by_name(
     except Exception as e:
         logger.error(f"Similar songs search failed: {e}", exc_info=True)
         return []
+
+def get_song_by_name(song_name: str, artist_name: Optional[str] = None) -> Optional[Dict]:
+    """Resolve a song title and optional artist, keeping the first title match."""
+    try:
+        songs = _get_songs()
+        titles = songs["track_name"].fillna("")
+        artists = songs["track_artist"].fillna("")
+
+        if artist_name:
+            matches = songs[
+                (titles.str.lower() == song_name.lower().strip())
+                & (artists.str.lower() == artist_name.lower().strip())
+            ]
+            if matches.empty:
+                matches = songs[
+                    (titles.str.lower() == song_name.lower().strip())
+                    & artists.str.contains(artist_name.strip(), case=False, na=False)
+                ]
+        else:
+            matches = songs[titles.str.lower() == song_name.lower().strip()]
+
+        if matches.empty:
+            matches = songs[
+                titles.str.contains(song_name.strip(), case=False, na=False)
+            ]
+            if artist_name:
+                artist_matches = matches[
+                    artists.str.lower().str.contains(artist_name.lower().strip(), na=False)
+                ]
+                if not artist_matches.empty:
+                    matches = artist_matches
+
+        if matches.empty:
+            logger.warning("No source song found with name: %s", song_name)
+            return None
+
+        song = matches.iloc[0].to_dict()
+
+        for key, value in list(song.items()):
+            if isinstance(value, float) and (
+                value != value or value == float("inf") or value == float("-inf")
+            ):
+                song[key] = None
+
+        return song
+
+    except Exception as e:
+        logger.error("Song name lookup failed: %s", e, exc_info=True)
+        return None
+
 
 def get_song_by_track_id(track_id: str) -> Optional[Dict]:
     try:

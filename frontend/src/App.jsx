@@ -21,6 +21,7 @@ export default function App() {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [recommendations, setRecommendations] = useState([]);
+  const [recommendationMeta, setRecommendationMeta] = useState(null);
   const [spotifyAccessToken, setSpotifyAccessToken] = useState(
     () => sessionStorage.getItem("spotify_access_token")
   );
@@ -142,6 +143,8 @@ export default function App() {
   }
 
   async function playSpotifyTrack(trackId) {
+    console.log("Playing Spotify track ID:", trackId);
+
     if (!spotifyDeviceId || !spotifyPlayer.current || !trackId) {
       setSpotifyStatus("Waiting for Spotify player to connect");
       return;
@@ -204,6 +207,11 @@ export default function App() {
     });
   }
 
+  function handleRecommendations(nextRecommendations, nextMeta) {
+    setRecommendations(nextRecommendations);
+    setRecommendationMeta(nextMeta);
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -233,6 +241,7 @@ export default function App() {
         <div className="app-grid">
           <Player
             currentTrack={currentTrack}
+            recommendations={recommendations}
             isPlaying={isPlaying}
             position={position}
             duration={duration}
@@ -242,6 +251,7 @@ export default function App() {
 
           <Recommendations
             songs={recommendations}
+            meta={recommendationMeta}
             currentTrack={currentTrack}
             isPlaying={isPlaying}
             playerReady={playerReady}
@@ -250,7 +260,7 @@ export default function App() {
           />
         </div>
 
-        <Chat onRecommendations={setRecommendations} />
+        <Chat onRecommendations={handleRecommendations} />
       </main>
     </div>
   );

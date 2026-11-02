@@ -73,3 +73,5 @@ frontend/out/
 # Environment files
 .env.local
 frontend/.env.local
+
+data/

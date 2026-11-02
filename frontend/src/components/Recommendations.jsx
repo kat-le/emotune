@@ -3,6 +3,7 @@ import "./Recommendations.css";
 
 export default function Recommendations({
   songs,
+  meta,
   currentTrack,
   isPlaying,
   playerReady,
@@ -10,6 +11,11 @@ export default function Recommendations({
   onToggle,
 }) {
   const activeId = currentTrack?.uri?.replace("spotify:track:", "") || null;
+  const description = meta?.type === "mood"
+    ? `${meta.mood || "Mood"} Playlist`
+    : meta?.type === "similar"
+      ? `For ${meta.sourceSong.title} by ${meta.sourceSong.artist}`
+      : "";
 
   return (
     <aside className="recommendations-panel" aria-label="Song recommendations">
@@ -20,7 +26,7 @@ export default function Recommendations({
         </div>
         <span className="recommendation-count">{songs.length}</span>
       </div>
-
+      <div className="recommendations-description"><p>{description}</p></div>
       <div className="recommendations-list">
         {songs.map((song, index) => {
           const trackId = song.track_id || song.id;

@@ -14,7 +14,7 @@ from typing import List, Optional
 import uvicorn
 
 from backend.emotion_service import EmotionDetectionService
-from backend.recommender_service import get_recommendations, get_similar_songs_by_name, get_song_by_track_id, get_similar_songs_by_track_id
+from backend.recommender_service import get_recommendations, get_similar_songs_by_name, get_song_by_track_id, get_similar_songs_by_track_id, get_song_by_name
 
 app = FastAPI(
     title="Emotune Recommender API",
@@ -72,6 +72,7 @@ class TextRequest(BaseModel):
 
 class SimilarSongsRequest(BaseModel):
     song_name: str
+    artist_name: Optional[str] = None
     top_n: int = 10
     preset: Optional[str] = None  # "mood", "workout", "chill", "psychedelic"
     use_genre_boost: bool = True
@@ -96,6 +97,8 @@ class RecommendationResponse(BaseModel):
 class SimilarSongsResponse(BaseModel):
     query_song: str
     found: bool
+    track_name: Optional[str] = None
+    track_artist: Optional[str] = None
     recommendations: List[dict]
 
 
@@ -234,17 +237,25 @@ async def recommend_similar_songs(request: SimilarSongsRequest):
     - use_genre_boost: Boost same-genre tracks (default: True)
     - use_artist_diversity: Limit songs per artist (default: True)
     """
+    source_song = get_song_by_name(
+        request.song_name,
+        artist_name=request.artist_name,
+    )
+
     recommendations = get_similar_songs_by_name(
         request.song_name,
         request.top_n,
         preset=request.preset,
         use_genre_boost=request.use_genre_boost,
         use_artist_diversity=request.use_artist_diversity,
+        artist_name=request.artist_name,
     )
-    
+
     return SimilarSongsResponse(
         query_song=request.song_name,
-        found=len(recommendations) > 0,
+        track_name=source_song["track_name"] if source_song else None,
+        track_artist=source_song["track_artist"] if source_song else None,
+        found=source_song is not None,
         recommendations=recommendations
     )
 

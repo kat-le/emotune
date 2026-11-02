@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import vinylImage from "../assets/images/vinyl.png";
+import playButtonImage from "../assets/icons/play-button.png";
+import pauseButtonImage from "../assets/icons/pause-button.png";
+import skipButtonImage from "../assets/icons/skip-button.png";
 import "./Player.css";
 
 function formatTime(milliseconds) {
@@ -9,7 +12,7 @@ function formatTime(milliseconds) {
   return `${minutes}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
-export default function Player({ currentTrack, isPlaying, position, duration, onToggle, playerReady }) {
+export default function Player({ currentTrack, recommendations = [], isPlaying, position, duration, onToggle, playerReady }) {
   const [livePosition, setLivePosition] = useState(position || 0);
 
   useEffect(() => {
@@ -29,6 +32,11 @@ export default function Player({ currentTrack, isPlaying, position, duration, on
   const artwork = currentTrack?.album?.images?.[0]?.url;
   const title = currentTrack?.name || "Choose a song";
   const artists = currentTrack?.artists?.map((artist) => artist.name).join(", ") || "Your music will appear here";
+  const currentTrackId = currentTrack?.uri?.replace("spotify:track:", "") || null;
+  const currentRecommendation = recommendations.find((song) =>
+    (song.track_id || song.id) === currentTrackId
+  );
+  const explanation = currentRecommendation?.explanation;
 
   return (
     <section className="player-area" aria-label="Now playing">
@@ -68,15 +76,38 @@ export default function Player({ currentTrack, isPlaying, position, duration, on
           <span className="now-playing-label">Now Playing</span>
           <h2>{title}</h2>
           <p>{artists}</p>
-          <button
-            type="button"
-            className="main-play-button"
-            onClick={onToggle}
-            disabled={!playerReady}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? "Ⅱ" : "▶"}
-          </button>
+          {explanation && (
+            <p className="now-playing-explanation">{explanation}</p>
+          )}
+          <div className="player-controls">
+            <button
+              type="button"
+              className="skip-button skip-button-left"
+              aria-label="Previous track"
+            >
+              <img src={skipButtonImage} alt="" />
+            </button>
+            <button
+              type="button"
+              className="main-play-button"
+              onClick={onToggle}
+              disabled={!playerReady}
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              <img
+                src={isPlaying ? pauseButtonImage : playButtonImage}
+                alt=""
+              />
+            </button>
+            <button
+              type="button"
+              className="skip-button skip-button-right"
+              aria-label="Next track"
+            >
+              <img src={skipButtonImage} alt="" />
+            </button>
+          </div>
+
           <div className="progress-copy">
             <span>{formatTime(livePosition)}</span>
             <span>{formatTime(duration)}</span>
